@@ -556,12 +556,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: isTablet ? 30 : 20,
     minHeight: isTablet ? 800 : 600, // Ensure enough content for scrolling
-    justifyContent: "space-around",
+    justifyContent: "space-between", // Changed from "space-around"
   },
   column: {
     flex: 1,
     marginHorizontal: isTablet ? 4 : 2,
-    maxWidth: isTablet ? screenWidth / 3 - 8 : undefined,
+    // Removed maxWidth constraint to let flex work properly
   },
   columnHeader: {
     flexDirection: "row",
