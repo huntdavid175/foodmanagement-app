@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,146 +12,94 @@ import {
   RefreshControl,
   TextInput,
   Image,
+  useWindowDimensions,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../utils/theme";
 import NavigationBar from "../components/NavigationBar";
 import AddMealScreen from "./AddMealScreen";
 import AddCategoryScreen from "./AddCategoryScreen";
+import {
+  subscribeToCategories,
+  getCategories,
+  addCategory,
+  subscribeToMenuItems,
+  getMenuItems,
+  addMenuItem,
+  updateMenuItem,
+} from "../services/firebaseService";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
-const isTablet = screenWidth >= 768;
+const isTablet = screenWidth >= 768; // retained if used elsewhere
+
+// Orientation state for responsive columns
+const getOrientation = () =>
+  screenWidth > screenHeight ? "landscape" : "portrait";
 
 const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
   const { theme, isDarkMode } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const { width, height } = useWindowDimensions();
+  const shortest = Math.min(width, height);
+  const isPad = Platform.OS === "ios" && Platform.isPad;
+  const isTabletNow = isPad || shortest >= 768; // treat >=768dp as tablet
+  const isLandscape = width > height;
+  const gridColumns = 3;
+  useEffect(() => {
+    console.log(
+      `Menu grid -> width:${width}, height:${height}, isPad:${isPad}, isTablet:${isTabletNow}, isLandscape:${isLandscape}, cols:${gridColumns}`
+    );
+  }, [width, height, isTabletNow, isLandscape, gridColumns]);
 
-  // Categories state
-  const [categories, setCategories] = useState([
-    { id: "1", name: "Main Dishes", color: "#FF6B35", itemCount: 5 },
-    { id: "2", name: "Appetizers", color: "#4CAF50", itemCount: 3 },
-    { id: "3", name: "Desserts", color: "#9C27B0", itemCount: 2 },
-    { id: "4", name: "Beverages", color: "#2196F3", itemCount: 4 },
-  ]);
+  // Derived categories from menuItems
+  // const [categories, setCategories] = useState([]);
+  // const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-  // Menu items state
-  const [menuItems, setMenuItems] = useState([
-    {
-      id: "1",
-      name: "Jollof Rice",
-      category: "1",
-      price: "₵25",
-      description: "Spicy rice cooked with tomatoes and spices",
-      image:
-        "https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=400&h=300&fit=crop",
-      available: true,
-      comesWith: "Rice, Salad, Drink",
-      sizeOptions: [
-        { name: "Small", price: "₵20" },
-        { name: "Medium", price: "₵25" },
-        { name: "Large", price: "₵30" },
-      ],
-      extraOptions: [
-        { name: "Extra Meat", price: "₵5" },
-        { name: "Extra Sauce", price: "₵2" },
-      ],
-    },
-    {
-      id: "2",
-      name: "Fufu with Palm Nut Soup",
-      category: "1",
-      price: "₵30",
-      description: "Traditional Ghanaian dish with rich palm nut soup",
-      image:
-        "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop",
-      available: true,
-      comesWith: "Fufu, Soup, Meat",
-      sizeOptions: [
-        { name: "Regular", price: "₵30" },
-        { name: "Large", price: "₵35" },
-      ],
-      extraOptions: [
-        { name: "Extra Meat", price: "₵5" },
-        { name: "Extra Fish", price: "₵3" },
-      ],
-    },
-    {
-      id: "3",
-      name: "Banku with Tilapia",
-      category: "1",
-      price: "₵35",
-      description: "Fermented corn and cassava dough with grilled fish",
-      image:
-        "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop",
-      available: true,
-      comesWith: "Banku, Fish, Sauce",
-      sizeOptions: [
-        { name: "Regular", price: "₵35" },
-        { name: "Large", price: "₵40" },
-      ],
-      extraOptions: [
-        { name: "Extra Fish", price: "₵5" },
-        { name: "Extra Sauce", price: "₵2" },
-      ],
-    },
-    {
-      id: "4",
-      name: "Grilled Chicken Wings",
-      category: "2",
-      price: "₵15",
-      description: "Crispy grilled chicken wings with special seasoning",
-      image:
-        "https://images.unsplash.com/photo-1567620832904-9d64bcd682f2?w=400&h=300&fit=crop",
-      available: true,
-      comesWith: "Wings, Sauce, Fries",
-      sizeOptions: [
-        { name: "6 Pieces", price: "₵15" },
-        { name: "12 Pieces", price: "₵25" },
-      ],
-      extraOptions: [
-        { name: "Extra Sauce", price: "₵2" },
-        { name: "Extra Fries", price: "₵3" },
-      ],
-    },
-    {
-      id: "5",
-      name: "Chocolate Cake",
-      category: "3",
-      price: "₵12",
-      description: "Rich chocolate cake with creamy frosting",
-      image:
-        "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop",
-      available: true,
-      comesWith: "Cake, Frosting, Decoration",
-      sizeOptions: [
-        { name: "Slice", price: "₵12" },
-        { name: "Whole Cake", price: "₵45" },
-      ],
-      extraOptions: [
-        { name: "Extra Frosting", price: "₵2" },
-        { name: "Nuts", price: "₵1" },
-      ],
-    },
-    {
-      id: "6",
-      name: "Fresh Fruit Juice",
-      category: "4",
-      price: "₵8",
-      description: "Freshly squeezed fruit juice with no added sugar",
-      image:
-        "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400&h=300&fit=crop",
-      available: true,
-      comesWith: "Juice, Ice, Straw",
-      sizeOptions: [
-        { name: "Small", price: "₵8" },
-        { name: "Large", price: "₵12" },
-      ],
-      extraOptions: [
-        { name: "Extra Ice", price: "₵1" },
-        { name: "Mint", price: "₵1" },
-      ],
-    },
-  ]);
+  // Menu items state (from Firestore)
+  const [menuItems, setMenuItems] = useState([]);
+  const [menuItemsLoading, setMenuItemsLoading] = useState(true);
+
+  // Subscribe to Firestore menu items
+  useEffect(() => {
+    const unsubscribe = subscribeToMenuItems((items) => {
+      setMenuItems(items);
+      setMenuItemsLoading(false);
+    });
+    getMenuItems()
+      .then((items) => setMenuItems(items))
+      .finally(() => setMenuItemsLoading(false));
+    return () => unsubscribe && unsubscribe();
+  }, []);
+
+  // Categories state (from Firestore)
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // Subscribe to Firestore categories
+  useEffect(() => {
+    const unsub = subscribeToCategories((cats) => {
+      setCategories(cats);
+      setCategoriesLoading(false);
+    });
+    getCategories()
+      .then((cats) => setCategories(cats))
+      .finally(() => setCategoriesLoading(false));
+    return () => unsub && unsub();
+  }, []);
+
+  // Compute item counts for categories from menuItems
+  const categoriesWithCounts = useMemo(() => {
+    const counts = new Map();
+    for (const item of menuItems) {
+      const key = item.category || "Uncategorized";
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return categories.map((cat) => ({
+      ...cat,
+      itemCount: counts.get(cat.name) || 0,
+    }));
+  }, [categories, menuItems]);
 
   // Modal states
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
@@ -161,6 +109,23 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
   const [showAddCategoryScreen, setShowAddCategoryScreen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [editingMenuItem, setEditingMenuItem] = useState(null);
+  const [showMenuItemDetailModal, setShowMenuItemDetailModal] = useState(false);
+  const [detailItem, setDetailItem] = useState(null);
+
+  const openMenuItemDetail = (item) => {
+    setDetailItem(item);
+    setShowMenuItemDetailModal(true);
+  };
+  const closeMenuItemDetail = () => {
+    setShowMenuItemDetailModal(false);
+    setDetailItem(null);
+  };
+  const startEditFromDetail = () => {
+    if (!detailItem) return;
+    setShowMenuItemDetailModal(false);
+    setEditingMenuItem(detailItem);
+    setShowAddMealScreen(true);
+  };
 
   // Form states
   const [newCategory, setNewCategory] = useState({
@@ -192,11 +157,21 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
     "#795548",
   ];
 
+  // categoriesWithCounts is computed in a memo below
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      const cats = await getCategories();
+      const withCounts = cats.map((cat) => ({
+        ...cat,
+        itemCount:
+          cat.id === "all"
+            ? menuItems.length
+            : menuItems.filter((m) => m.category === cat.id).length,
+      }));
+      setCategories(withCounts);
       console.log("🔄 Menu Management refreshed successfully");
-      // In a real app, you would reload data from your backend here
     } catch (error) {
       console.error("Error refreshing menu management:", error);
     } finally {
@@ -335,11 +310,12 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
     setShowEditMenuItemModal(true);
   };
 
+  // Adapt selected category filter for Firestore shape (category is a string name)
   const getFilteredMenuItems = () => {
-    if (selectedCategory === "all") {
-      return menuItems;
-    }
-    return menuItems.filter((item) => item.category === selectedCategory);
+    if (selectedCategory === "all") return menuItems;
+    return menuItems.filter(
+      (item) => (item.category || "Uncategorized") === selectedCategory
+    );
   };
 
   const CategoryCard = ({ category, isSelected, onPress }) => (
@@ -377,7 +353,14 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
   );
 
   const MenuItemCard = ({ item, onEdit, onDelete, onToggleAvailability }) => {
-    const category = categories.find((cat) => cat.id === item.category);
+    const isBestseller =
+      Boolean(item.bestseller) || (item.deliveredCount ?? 0) >= 50;
+    const ratingsCount = item.ratingsCount ?? item.reviewsCount ?? 0;
+    const deliveredCount = item.deliveredCount ?? item.ordersCount ?? 0;
+    const priceNumber =
+      typeof item.price === "number"
+        ? item.price
+        : Number(String(item.price).replace(/[^0-9.]/g, ""));
 
     return (
       <View
@@ -389,133 +372,121 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
           },
         ]}
       >
-        <View style={styles.menuItemHeader}>
-          <View style={styles.menuItemInfo}>
-            <Text
-              style={[styles.menuItemName, { color: theme.text }]}
-              numberOfLines={1}
-            >
-              {item.name}
-            </Text>
-            <Text style={[styles.menuItemPrice, { color: theme.primary }]}>
-              {item.price}
-            </Text>
+        {/* Image with badge */}
+        {item.image ? (
+          <View style={styles.imageWrapper}>
+            <Image source={{ uri: item.image }} style={styles.menuItemImage} />
+            {isBestseller && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>BESTSELLER</Text>
+              </View>
+            )}
           </View>
-          <View style={styles.menuItemActions}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                { backgroundColor: item.available ? "#4CAF50" : "#F44336" },
-              ]}
-              onPress={() => onToggleAvailability(item.id)}
-            >
-              <Ionicons
-                name={item.available ? "checkmark-circle" : "close-circle"}
-                size={14}
-                color="white"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.primary }]}
-              onPress={() => onEdit(item)}
-            >
-              <Ionicons name="create" size={14} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: "#F44336" }]}
-              onPress={() => onDelete(item.id)}
-            >
-              <Ionicons name="trash" size={14} color="white" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        ) : null}
 
-        {item.image && (
-          <Image source={{ uri: item.image }} style={styles.menuItemImage} />
-        )}
-
+        {/* Title */}
         <Text
-          style={[styles.menuItemDescription, { color: theme.textSecondary }]}
+          style={[styles.menuItemName, { color: theme.text }]}
           numberOfLines={2}
         >
-          {item.description}
+          {item.name}
         </Text>
 
-        {category && (
-          <View
-            style={[
-              styles.categoryTag,
-              { backgroundColor: category.color + "20" },
-            ]}
-          >
-            <Text
-              style={[styles.categoryTagText, { color: category.color }]}
-              numberOfLines={1}
-            >
-              {category.name}
-            </Text>
-          </View>
-        )}
+        {/* Ratings row */}
+        <View style={styles.ratingsRow}>
+          <Ionicons name="star" size={14} color="#FFC107" />
+          <Ionicons name="star" size={14} color="#FFC107" />
+          <Ionicons name="star" size={14} color="#FFC107" />
+          <Ionicons name="star" size={14} color="#FFC107" />
+          <Ionicons name="star-outline" size={14} color="#FFC107" />
+          <Text style={[styles.ratingsText, { color: theme.textSecondary }]}>
+            {`  ${ratingsCount} ratings | ${deliveredCount} delivered`}
+          </Text>
+        </View>
 
-        {item.sizeOptions && item.sizeOptions.length > 0 && (
-          <View style={styles.optionsContainer}>
-            <Text style={[styles.optionsTitle, { color: theme.textSecondary }]}>
-              Sizes:
-            </Text>
-            <View style={styles.optionsList}>
-              {item.sizeOptions.slice(0, 2).map((option, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.optionTag,
-                    {
-                      backgroundColor: isDarkMode ? theme.border : "#F0F0F0",
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[styles.optionText, { color: theme.textSecondary }]}
-                    numberOfLines={1}
-                  >
-                    {option.name} - {option.price}
-                  </Text>
-                </View>
-              ))}
-              {item.sizeOptions.length > 2 && (
-                <Text
-                  style={[
-                    styles.moreOptionsText,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  +{item.sizeOptions.length - 2} more
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
+        {/* Price */}
+        <Text style={[styles.menuItemPriceLarge, { color: theme.text }]}>
+          {`₵${Number.isFinite(priceNumber) ? priceNumber : 0}`}
+        </Text>
       </View>
     );
   };
+
+  const headerCategories = [
+    {
+      id: "all",
+      name: "All Items",
+      color: "#666",
+      itemCount: menuItems.length,
+    },
+    ...categoriesWithCounts,
+  ];
+
+  // Helper: pad data so last row is filled to keep fixed grid widths
+  const padToFullRows = useMemo(() => {
+    return (items, columns) => {
+      if (!Array.isArray(items) || !columns) return items || [];
+      const remainder = items.length % columns;
+      if (remainder === 0) return items;
+      const padCount = columns - remainder;
+      const padded = [...items];
+      for (let i = 0; i < padCount; i += 1) {
+        padded.push({ __empty: true, id: `__empty-${i}` });
+      }
+      return padded;
+    };
+  }, []);
+
+  const filteredItems = useMemo(
+    () => getFilteredMenuItems(),
+    [menuItems, selectedCategory]
+  );
+  const gridData = useMemo(
+    () => padToFullRows(filteredItems, gridColumns),
+    [filteredItems, gridColumns, padToFullRows]
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {showAddMealScreen ? (
         <AddMealScreen
-          onBack={() => setShowAddMealScreen(false)}
-          onSave={(mealData) => {
-            console.log("✅ Meal saved:", mealData);
-            setMenuItems([...menuItems, mealData]);
+          onBack={() => {
             setShowAddMealScreen(false);
+            setEditingMenuItem(null);
+          }}
+          categories={categories}
+          initialItem={editingMenuItem || null}
+          onSave={async (mealData) => {
+            try {
+              if (mealData?.id) {
+                await updateMenuItem(mealData.id, mealData);
+                console.log("✅ Menu item updated:", mealData.id);
+              } else {
+                const newId = await addMenuItem(mealData);
+                console.log("✅ Menu item added:", newId);
+              }
+            } catch (e) {
+              console.error("Failed to save menu item", e);
+              Alert.alert("Error", "Failed to save menu item");
+            } finally {
+              setShowAddMealScreen(false);
+              setEditingMenuItem(null);
+            }
           }}
         />
       ) : showAddCategoryScreen ? (
         <AddCategoryScreen
           onBack={() => setShowAddCategoryScreen(false)}
-          onSave={(categoryData) => {
-            console.log("✅ Category saved:", categoryData);
-            setCategories([...categories, categoryData]);
-            setShowAddCategoryScreen(false);
+          onSave={async (categoryData) => {
+            try {
+              const newId = await addCategory(categoryData);
+              console.log("✅ Category added:", newId);
+            } catch (e) {
+              console.error("Failed to add category", e);
+              Alert.alert("Error", "Failed to add category");
+            } finally {
+              setShowAddCategoryScreen(false);
+            }
           }}
         />
       ) : (
@@ -523,7 +494,7 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
           <NavigationBar activeTab={activeTab} onTabPress={onTabPress} />
 
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Menu Management</Text>
+            <Text style={styles.headerTitle}>Menu </Text>
             <View style={styles.headerActions}>
               <TouchableOpacity
                 style={[
@@ -575,101 +546,117 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
             </Text>
           </TouchableOpacity>
 
-          <ScrollView
+          <FlatList
             style={styles.content}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={[theme.primary]}
-                tintColor={theme.primary}
-              />
+            data={gridData}
+            keyExtractor={(item, index) =>
+              item?.id ? String(item.id) : `__empty-${index}`
             }
-          >
-            {/* Categories Section */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Categories ({categories.length})
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.categoriesContainer}
-              >
-                <CategoryCard
-                  category={{
-                    id: "all",
-                    name: "All Items",
-                    color: "#666",
-                    itemCount: menuItems.length,
-                  }}
-                  isSelected={selectedCategory === "all"}
-                  onPress={() => setSelectedCategory("all")}
+            numColumns={gridColumns}
+            key={`cols-${gridColumns}`}
+            extraData={{
+              gridColumns,
+              selectedCategory,
+              count: filteredItems.length,
+            }}
+            renderItem={({ item }) =>
+              item.__empty ? (
+                <View
+                  style={[
+                    styles.menuItemContainer,
+                    styles.menuItemPlaceholder,
+                    { width: `${100 / gridColumns}%`, paddingHorizontal: 4 },
+                  ]}
                 />
-                {categories.map((category) => (
-                  <CategoryCard
-                    key={category.id}
-                    category={category}
-                    isSelected={selectedCategory === category.id}
-                    onPress={() => setSelectedCategory(category.id)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-
-            {/* Menu Items Section */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Menu Items ({getFilteredMenuItems().length})
-              </Text>
-              {getFilteredMenuItems().length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons
-                    name="restaurant"
-                    size={48}
-                    color={theme.textSecondary}
-                  />
-                  <Text style={[styles.emptyText, { color: theme.text }]}>
-                    No menu items found
-                  </Text>
-                  <Text
-                    style={[
-                      styles.emptySubtext,
-                      { color: theme.textSecondary },
-                    ]}
+              ) : (
+                <View
+                  style={[
+                    styles.menuItemContainer,
+                    { width: `${100 / gridColumns}%`, paddingHorizontal: 4 },
+                  ]}
+                >
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => openMenuItemDetail(item)}
                   >
-                    Add your first menu item to get started
+                    <MenuItemCard
+                      item={item}
+                      onEdit={openEditModal}
+                      onDelete={handleDeleteMenuItem}
+                      onToggleAvailability={handleToggleAvailability}
+                    />
+                  </TouchableOpacity>
+                </View>
+              )
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.menuItemsGrid}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            ListHeaderComponent={
+              <>
+                {/* Categories Section */}
+                <View style={styles.section}>
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Categories ({categories.length})
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.categoriesContainer}
+                  >
+                    {headerCategories.map((category) => (
+                      <CategoryCard
+                        key={category.id}
+                        category={{
+                          ...category,
+                          color: category.color || "#666",
+                        }}
+                        isSelected={
+                          category.id === "all"
+                            ? selectedCategory === "all"
+                            : selectedCategory === category.name
+                        }
+                        onPress={() =>
+                          setSelectedCategory(
+                            category.id === "all" ? "all" : category.name
+                          )
+                        }
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Menu Items Section Header */}
+                <View style={styles.section}>
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Menu Items (
+                    {menuItemsLoading
+                      ? "loading..."
+                      : getFilteredMenuItems().length}
+                    )
                   </Text>
                 </View>
-              ) : (
-                <FlatList
-                  data={getFilteredMenuItems()}
-                  keyExtractor={(item) => item.id}
-                  numColumns={isTablet ? 3 : 2}
-                  renderItem={({ item, index }) => (
-                    <View
-                      style={[
-                        styles.menuItemContainer,
-                        {
-                          width: isTablet ? `${100 / 3}%` : `${100 / 2}%`,
-                          paddingHorizontal: 4,
-                        },
-                      ]}
-                    >
-                      <MenuItemCard
-                        item={item}
-                        onEdit={openEditModal}
-                        onDelete={handleDeleteMenuItem}
-                        onToggleAvailability={handleToggleAvailability}
-                      />
-                    </View>
-                  )}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.menuItemsGrid}
+              </>
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Ionicons
+                  name="restaurant"
+                  size={48}
+                  color={theme.textSecondary}
                 />
-              )}
-            </View>
-          </ScrollView>
+                <Text style={[styles.emptyText, { color: theme.text }]}>
+                  No menu items found
+                </Text>
+                <Text
+                  style={[styles.emptySubtext, { color: theme.textSecondary }]}
+                >
+                  Add your first menu item to get started
+                </Text>
+              </View>
+            }
+          />
         </>
       )}
 
@@ -1365,6 +1352,185 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Menu Item Detail Modal */}
+      <Modal
+        visible={showMenuItemDetailModal}
+        animationType="fade"
+        transparent
+        onRequestClose={closeMenuItemDetail}
+      >
+        <View style={styles.detailOverlay}>
+          <View
+            style={[
+              styles.detailCard,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+          >
+            {detailItem?.image ? (
+              <View style={styles.detailImageWrapper}>
+                <Image
+                  source={{ uri: detailItem.image }}
+                  style={styles.detailImage}
+                />
+                {Boolean(detailItem?.bestseller) && (
+                  <View style={styles.detailBadge}>
+                    <Text style={styles.detailBadgeText}>BESTSELLER</Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.detailCloseBtn}
+                  onPress={closeMenuItemDetail}
+                >
+                  <Ionicons name="close" size={22} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.detailCloseTopRight}
+                onPress={closeMenuItemDetail}
+              >
+                <Ionicons name="close" size={22} color={theme.text} />
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.detailBody}>
+              <Text
+                style={[styles.detailTitle, { color: theme.text }]}
+                numberOfLines={2}
+              >
+                {detailItem?.name}
+              </Text>
+
+              {detailItem?.description ? (
+                <Text
+                  style={[
+                    styles.detailDescription,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {detailItem.description}
+                </Text>
+              ) : null}
+
+              <View style={styles.detailMetaRow}>
+                <View style={styles.detailRatingRow}>
+                  <Ionicons name="star" size={14} color="#FFC107" />
+                  <Ionicons name="star" size={14} color="#FFC107" />
+                  <Ionicons name="star" size={14} color="#FFC107" />
+                  <Ionicons name="star" size={14} color="#FFC107" />
+                  <Ionicons name="star-outline" size={14} color="#FFC107" />
+                  <Text
+                    style={[
+                      styles.detailMetaText,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {" "}
+                    {detailItem?.ratingsCount ?? 0} ratings
+                  </Text>
+                </View>
+                <Text style={[styles.detailPrice, { color: theme.text }]}>
+                  ₵
+                  {typeof detailItem?.price === "number"
+                    ? detailItem.price
+                    : Number(
+                        String(detailItem?.price || "").replace(/[^0-9.]/g, "")
+                      ) || 0}
+                </Text>
+              </View>
+
+              {/* Sizes */}
+              {Array.isArray(detailItem?.sizes) &&
+                detailItem.sizes.length > 0 && (
+                  <View style={styles.detailSection}>
+                    <Text
+                      style={[styles.detailSectionTitle, { color: theme.text }]}
+                    >
+                      Sizes
+                    </Text>
+                    <View style={styles.detailChipsRow}>
+                      {detailItem.sizes.map((s, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.detailChip,
+                            {
+                              backgroundColor: theme.surface,
+                              borderColor: theme.border,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.detailChipText,
+                              { color: theme.textSecondary },
+                            ]}
+                          >
+                            {s.name} - ₵{s.price}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+              {/* Extras */}
+              {Array.isArray(detailItem?.extras) &&
+                detailItem.extras.length > 0 && (
+                  <View style={styles.detailSection}>
+                    <Text
+                      style={[styles.detailSectionTitle, { color: theme.text }]}
+                    >
+                      Extras
+                    </Text>
+                    <View style={styles.detailChipsRow}>
+                      {detailItem.extras.map((e, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.detailChip,
+                            {
+                              backgroundColor: theme.surface,
+                              borderColor: theme.border,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.detailChipText,
+                              { color: theme.textSecondary },
+                            ]}
+                          >
+                            {e.name} - ₵{e.price}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+              {/* Action buttons */}
+              <View style={styles.detailActions}>
+                <TouchableOpacity
+                  style={[styles.detailBtn, { backgroundColor: theme.primary }]}
+                  onPress={startEditFromDetail}
+                >
+                  <Text style={styles.detailBtnText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.detailBtn, { backgroundColor: "#E0E0E0" }]}
+                  onPress={closeMenuItemDetail}
+                >
+                  <Text style={[styles.detailBtnText, { color: "#333" }]}>
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1438,6 +1604,9 @@ const styles = StyleSheet.create({
   menuItemContainer: {
     marginBottom: 16,
   },
+  menuItemPlaceholder: {
+    height: 0, // Placeholder for empty rows
+  },
   menuItemCard: {
     padding: 12,
     borderRadius: 12,
@@ -1447,7 +1616,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    height: isTablet ? 300 : 360,
+    // Remove fixed height so content determines height
   },
   menuItemHeader: {
     flexDirection: "row",
@@ -1477,9 +1646,10 @@ const styles = StyleSheet.create({
   },
   menuItemImage: {
     width: "100%",
-    height: 120,
+    aspectRatio: 1,
     borderRadius: 8,
     marginBottom: 8,
+    objectFit: "cover",
   },
   menuItemDescription: {
     fontSize: 14,
@@ -1685,6 +1855,171 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  imageWrapper: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  badge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: "#FF6B35",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  ratingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  ratingsText: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  menuItemPriceLarge: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: 8,
+  },
+  detailOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  detailCard: {
+    width: "100%",
+    maxWidth: 400,
+    borderRadius: 15,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  detailImageWrapper: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: 1.2,
+    borderRadius: 15,
+    overflow: "hidden",
+  },
+  detailImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  detailBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "#FF6B35",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  detailBadgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  detailCloseTopRight: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    padding: 8,
+    borderRadius: 12,
+  },
+  detailBody: {
+    padding: 20,
+    paddingTop: 12,
+  },
+  detailTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  detailDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  detailMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  detailRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  detailMetaText: {
+    fontSize: 14,
+  },
+  detailPrice: {
+    fontSize: 28,
+    fontWeight: "bold",
+  },
+  detailSection: {
+    marginBottom: 16,
+  },
+  detailSectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  detailChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  detailChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  detailChipText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  detailActions: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 20,
+  },
+  detailBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginHorizontal: 8,
+  },
+  detailBtnText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "white",
   },
 });
 

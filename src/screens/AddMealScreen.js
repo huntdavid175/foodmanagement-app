@@ -15,29 +15,62 @@ import { useTheme } from "../utils/theme";
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const isTablet = screenWidth >= 768;
 
-const AddMealScreen = ({ onBack, onSave }) => {
+const AddMealScreen = ({
+  onBack,
+  onSave,
+  categories = [],
+  initialItem = null,
+}) => {
   const { theme } = useTheme();
-  const [newMenuItem, setNewMenuItem] = useState({
-    name: "",
-    category: "",
-    basePrice: "",
-    description: "",
-    image: "",
-    available: true,
-    comesWith: "",
-    sizeOptions: [],
-    extraOptions: [],
-  });
+  const [newMenuItem, setNewMenuItem] = useState(
+    initialItem
+      ? {
+          name: initialItem.name || "",
+          category: initialItem.category || "",
+          basePrice:
+            typeof initialItem.price === "number"
+              ? String(initialItem.price)
+              : String(initialItem.price || ""),
+          description: initialItem.description || "",
+          image: initialItem.image || "",
+          available:
+            typeof initialItem.available === "boolean"
+              ? initialItem.available
+              : true,
+          comesWith: initialItem.comesWith || "",
+          sizeOptions: Array.isArray(initialItem.sizes)
+            ? initialItem.sizes.map((s) => ({
+                name: s.name,
+                price: String(s.price),
+              }))
+            : [],
+          extraOptions: Array.isArray(initialItem.extras)
+            ? initialItem.extras.map((e) => ({
+                name: e.name,
+                price: String(e.price),
+              }))
+            : [],
+        }
+      : {
+          name: "",
+          category: "",
+          basePrice: "",
+          description: "",
+          image: "",
+          available: true,
+          comesWith: "",
+          sizeOptions: [],
+          extraOptions: [],
+        }
+  );
   const [newSizeOption, setNewSizeOption] = useState({ name: "", price: "" });
   const [newExtraOption, setNewExtraOption] = useState({ name: "", price: "" });
 
-  // Sample categories - in a real app, this would come from props or context
-  const categories = [
-    { id: "1", name: "Main Dishes", color: "#FF6B35" },
-    { id: "2", name: "Appetizers", color: "#4CAF50" },
-    { id: "3", name: "Desserts", color: "#9C27B0" },
-    { id: "4", name: "Beverages", color: "#2196F3" },
-  ];
+  const normalizedCategories = categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    color: c.color || "#666",
+  }));
 
   const handleSaveMeal = () => {
     if (
@@ -46,18 +79,25 @@ const AddMealScreen = ({ onBack, onSave }) => {
       newMenuItem.basePrice
     ) {
       const menuItem = {
-        id: Date.now().toString(),
+        id: initialItem?.id,
         name: newMenuItem.name.trim(),
-        category: newMenuItem.category,
-        price: newMenuItem.basePrice,
+        category: newMenuItem.category, // Firestore expects category name string
+        price: Number(newMenuItem.basePrice),
         description: newMenuItem.description || "",
         image:
           newMenuItem.image ||
           "https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=400&h=300&fit=crop",
         available: newMenuItem.available,
-        comesWith: newMenuItem.comesWith || "",
-        sizeOptions: newMenuItem.sizeOptions || [],
-        extraOptions: newMenuItem.extraOptions || [],
+        sizes: (newMenuItem.sizeOptions || []).map((s) => ({
+          id: s.id || s.name.toLowerCase().replace(/\s+/g, "-"),
+          name: s.name,
+          price: Number(s.price),
+        })),
+        extras: (newMenuItem.extraOptions || []).map((e) => ({
+          id: e.id || e.name.toLowerCase().replace(/\s+/g, "-"),
+          name: e.name,
+          price: Number(e.price),
+        })),
       };
 
       // In a real app, you would save this to your backend/database
@@ -112,8 +152,8 @@ const AddMealScreen = ({ onBack, onSave }) => {
     });
   };
 
-  const selectedCategory = categories.find(
-    (cat) => cat.id === newMenuItem.category
+  const selectedCategory = normalizedCategories.find(
+    (cat) => cat.name === newMenuItem.category
   );
 
   return (
@@ -123,7 +163,9 @@ const AddMealScreen = ({ onBack, onSave }) => {
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Meal</Text>
+        <Text style={styles.headerTitle}>
+          {initialItem ? "Edit Meal" : "Add New Meal"}
+        </Text>
         <TouchableOpacity style={styles.saveButton} onPress={handleSaveMeal}>
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
@@ -133,7 +175,7 @@ const AddMealScreen = ({ onBack, onSave }) => {
         {/* Basic Information Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Basic Information
+            {initialItem ? "Edit Information" : "Basic Information"}
           </Text>
 
           {/* Meal Name */}
@@ -158,21 +200,21 @@ const AddMealScreen = ({ onBack, onSave }) => {
           {/* Category */}
           <Text style={[styles.label, { color: theme.text }]}>Category *</Text>
           <View style={styles.categoryGrid}>
-            {categories.map((category) => (
+            {normalizedCategories.map((category) => (
               <TouchableOpacity
                 key={category.id}
                 style={[
                   styles.categoryOption,
                   {
                     backgroundColor:
-                      newMenuItem.category === category.id
+                      newMenuItem.category === category.name
                         ? category.color
                         : theme.surface,
                     borderColor: category.color,
                   },
                 ]}
                 onPress={() =>
-                  setNewMenuItem({ ...newMenuItem, category: category.id })
+                  setNewMenuItem({ ...newMenuItem, category: category.name })
                 }
               >
                 <Text
@@ -180,7 +222,7 @@ const AddMealScreen = ({ onBack, onSave }) => {
                     styles.categoryOptionText,
                     {
                       color:
-                        newMenuItem.category === category.id
+                        newMenuItem.category === category.name
                           ? "white"
                           : theme.text,
                     },

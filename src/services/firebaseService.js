@@ -14,6 +14,127 @@ import { db } from "../../firebaseConfig";
 
 // Orders collection reference
 const ORDERS_COLLECTION = "orders";
+// Categories collection reference
+const CATEGORIES_COLLECTION = "categories";
+// Menu Items collection reference
+const MENU_ITEMS_COLLECTION = "menuItems";
+
+// Helper: sort categories by sortOrder (nulls last), then name asc
+const sortCategoriesClientSide = (categories) => {
+  return [...categories].sort((a, b) => {
+    const aOrder = a.sortOrder;
+    const bOrder = b.sortOrder;
+    const aIsNull = aOrder === null || aOrder === undefined;
+    const bIsNull = bOrder === null || bOrder === undefined;
+
+    if (aIsNull && bIsNull) {
+      // Both null: fallback to name
+      const aName = (a.name || "").toLowerCase();
+      const bName = (b.name || "").toLowerCase();
+      return aName.localeCompare(bName);
+    }
+    if (aIsNull) return 1; // a after b
+    if (bIsNull) return -1; // a before b
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    const aName = (a.name || "").toLowerCase();
+    const bName = (b.name || "").toLowerCase();
+    return aName.localeCompare(bName);
+  });
+};
+
+// Real-time listener for categories
+export const subscribeToCategories = (callback) => {
+  const q = query(collection(db, CATEGORIES_COLLECTION));
+  return onSnapshot(q, (querySnapshot) => {
+    const categories = [];
+    querySnapshot.forEach((docSnap) => {
+      categories.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    callback(sortCategoriesClientSide(categories));
+  });
+};
+
+// One-time fetch of categories
+export const getCategories = async () => {
+  const q = query(collection(db, CATEGORIES_COLLECTION));
+  const querySnapshot = await getDocs(q);
+  const categories = [];
+  querySnapshot.forEach((docSnap) => {
+    categories.push({ id: docSnap.id, ...docSnap.data() });
+  });
+  return sortCategoriesClientSide(categories);
+};
+
+// Add a new category
+export const addCategory = async (categoryData) => {
+  const payload = {
+    name: categoryData.name || "",
+    description: categoryData.description ?? "",
+    color: categoryData.color || "#FF6B6B",
+    active: categoryData.active ?? true,
+    sortOrder: categoryData.sortOrder ?? null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  const docRef = await addDoc(collection(db, CATEGORIES_COLLECTION), payload);
+  return docRef.id;
+};
+
+// Update category
+export const updateCategory = async (categoryId, updates) => {
+  const categoryRef = doc(db, CATEGORIES_COLLECTION, categoryId);
+  await updateDoc(categoryRef, { ...updates, updatedAt: serverTimestamp() });
+};
+
+// ===================== MENU ITEMS =====================
+export const subscribeToMenuItems = (callback) => {
+  const q = query(
+    collection(db, MENU_ITEMS_COLLECTION),
+    orderBy("createdAt", "desc")
+  );
+  return onSnapshot(q, (querySnapshot) => {
+    const items = [];
+    querySnapshot.forEach((docSnap) => {
+      items.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    callback(items);
+  });
+};
+
+export const getMenuItems = async () => {
+  const q = query(
+    collection(db, MENU_ITEMS_COLLECTION),
+    orderBy("createdAt", "desc")
+  );
+  const querySnapshot = await getDocs(q);
+  const items = [];
+  querySnapshot.forEach((docSnap) => {
+    items.push({ id: docSnap.id, ...docSnap.data() });
+  });
+  return items;
+};
+
+export const addMenuItem = async (menuItemData) => {
+  const payload = {
+    name: menuItemData.name || "",
+    image: menuItemData.image || "",
+    price: typeof menuItemData.price === "number" ? menuItemData.price : 0,
+    description: menuItemData.description ?? "",
+    available: menuItemData.available ?? true,
+    category: menuItemData.category || "",
+    sizes: Array.isArray(menuItemData.sizes) ? menuItemData.sizes : [],
+    extras: Array.isArray(menuItemData.extras) ? menuItemData.extras : [],
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  const docRef = await addDoc(collection(db, MENU_ITEMS_COLLECTION), payload);
+  return docRef.id;
+};
+
+export const updateMenuItem = async (menuItemId, updates) => {
+  const itemRef = doc(db, MENU_ITEMS_COLLECTION, menuItemId);
+  await updateDoc(itemRef, { ...updates, updatedAt: serverTimestamp() });
+};
 
 // Add a new order to Firebase
 export const addOrder = async (orderData) => {
