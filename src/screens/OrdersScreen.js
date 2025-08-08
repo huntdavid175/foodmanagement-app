@@ -198,102 +198,115 @@ const OrdersScreen = ({ activeTab = "orders", onTabPress }) => {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <NavigationBar activeTab={activeTab} onTabPress={onTabPress} />
 
-      <ScrollView style={styles.content}>
-        {/* Analytics Section */}
-        <View style={styles.analyticsSection}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Order Analytics
-          </Text>
-          <View style={styles.analyticsGrid}>
-            <AnalyticsCard
-              title="Total Orders"
-              value={totalOrders}
-              icon="list"
-              color="#4A90E2"
-            />
-            <AnalyticsCard
-              title="Today's Orders"
-              value={todayOrders}
-              icon="calendar"
-              color="#7ED321"
-            />
-          </View>
-        </View>
-
-        {/* Filters Section */}
-        <View style={styles.filtersSection}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Filter Orders
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filtersContainer}
-          >
-            <FilterButton
-              title="All"
-              count={totalOrders}
-              isActive={activeFilter === "all"}
-              onPress={() => setActiveFilter("all")}
-            />
-            <FilterButton
-              title="Delivered"
-              count={analytics.delivered}
-              isActive={activeFilter === "delivered"}
-              onPress={() => handleFilterChange("delivered")}
-            />
-            <FilterButton
-              title="Pending"
-              count={analytics.pending}
-              isActive={activeFilter === "pending"}
-              onPress={() => handleFilterChange("pending")}
-            />
-            <FilterButton
-              title="Preparing"
-              count={analytics.preparing}
-              isActive={activeFilter === "preparing"}
-              onPress={() => handleFilterChange("preparing")}
-            />
-            <FilterButton
-              title="Pickup"
-              count={analytics.pickup || 0}
-              isActive={activeFilter === "pickup"}
-              onPress={() => handleFilterChange("pickup")}
-            />
-            <FilterButton
-              title="Delivery"
-              count={analytics.delivery || 0}
-              isActive={activeFilter === "delivery"}
-              onPress={() => handleFilterChange("delivery")}
-            />
-          </ScrollView>
-        </View>
-
-        {/* Orders List */}
-        <View style={[styles.ordersSection, { backgroundColor: theme.card }]}>
-          <View style={styles.ordersHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              All Orders ({getFilteredOrders().length})
-            </Text>
-            <TouchableOpacity style={styles.sortButton}>
-              <Ionicons name="funnel" size={20} color={theme.textSecondary} />
-              <Text
-                style={[styles.sortButtonText, { color: theme.textSecondary }]}
-              >
-                Sort
+      <FlatList
+        style={styles.content}
+        data={getFilteredOrders()}
+        renderItem={renderOrderCard}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        onEndReached={loadMoreOrders}
+        onEndReachedThreshold={0.5}
+        contentContainerStyle={styles.ordersList}
+        ListHeaderComponent={
+          <>
+            {/* Analytics Section */}
+            <View style={styles.analyticsSection}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Order Analytics
               </Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.analyticsGrid}>
+                <AnalyticsCard
+                  title="Total Orders"
+                  value={totalOrders}
+                  icon="list"
+                  color="#4A90E2"
+                />
+                <AnalyticsCard
+                  title="Today's Orders"
+                  value={todayOrders}
+                  icon="calendar"
+                  color="#7ED321"
+                />
+              </View>
+            </View>
 
-          <FlatList
-            data={getFilteredOrders()}
-            renderItem={renderOrderCard}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.ordersList}
-          />
-        </View>
-      </ScrollView>
+            {/* Filters Section */}
+            <View style={styles.filtersSection}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Filter Orders
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filtersContainer}
+              >
+                <FilterButton
+                  title="All"
+                  count={totalOrders}
+                  isActive={activeFilter === "all"}
+                  onPress={() => setActiveFilter("all")}
+                />
+                <FilterButton
+                  title="Delivered"
+                  count={analytics.delivered}
+                  isActive={activeFilter === "delivered"}
+                  onPress={() => handleFilterChange("delivered")}
+                />
+                <FilterButton
+                  title="Pending"
+                  count={analytics.pending}
+                  isActive={activeFilter === "pending"}
+                  onPress={() => handleFilterChange("pending")}
+                />
+                <FilterButton
+                  title="Preparing"
+                  count={analytics.preparing}
+                  isActive={activeFilter === "preparing"}
+                  onPress={() => handleFilterChange("preparing")}
+                />
+                <FilterButton
+                  title="Pickup"
+                  count={analytics.pickup || 0}
+                  isActive={activeFilter === "pickup"}
+                  onPress={() => handleFilterChange("pickup")}
+                />
+                <FilterButton
+                  title="Delivery"
+                  count={analytics.delivery || 0}
+                  isActive={activeFilter === "delivery"}
+                  onPress={() => handleFilterChange("delivery")}
+                />
+              </ScrollView>
+            </View>
+
+            {/* Orders Header */}
+            <View
+              style={[styles.ordersSection, { backgroundColor: theme.card }]}
+            >
+              <View style={styles.ordersHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  All Orders ({getFilteredOrders().length})
+                </Text>
+                <TouchableOpacity style={styles.sortButton}>
+                  <Ionicons
+                    name="funnel"
+                    size={20}
+                    color={theme.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.sortButtonText,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    Sort
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        }
+      />
 
       {/* Order Detail Modal */}
       <OrderDetailModal

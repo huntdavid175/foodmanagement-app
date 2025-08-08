@@ -4,6 +4,8 @@ import { View, Text, StyleSheet } from "react-native";
 import DashboardScreen from "./src/screens/DashboardScreen";
 import OrdersScreen from "./src/screens/OrdersScreen";
 import KitchenScreen from "./src/screens/KitchenScreen";
+import MenuManagementScreen from "./src/screens/MenuManagementScreen";
+import AddMealScreen from "./src/screens/AddMealScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import { ThemeProvider } from "./src/utils/theme";
 
@@ -66,9 +68,15 @@ export default function App() {
             />
           );
         case "menu":
-          // TODO: Create MenuScreen
           return (
-            <DashboardScreen
+            <MenuManagementScreen
+              activeTab={activeScreen}
+              onTabPress={handleTabPress}
+            />
+          );
+        case "add-meal":
+          return (
+            <AddMealScreen
               activeTab={activeScreen}
               onTabPress={handleTabPress}
             />
