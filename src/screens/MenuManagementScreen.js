@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../utils/theme";
+import BottomTabBar from "../components/BottomTabBar";
 import NavigationBar from "../components/NavigationBar";
 import AddMealScreen from "./AddMealScreen";
 import AddCategoryScreen from "./AddCategoryScreen";
@@ -492,6 +493,7 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
       ) : (
         <>
           <NavigationBar activeTab={activeTab} onTabPress={onTabPress} />
+          {/* <BottomTabBar activeTab={activeTab} onTabPress={onTabPress} />  */}
 
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Menu </Text>
@@ -524,27 +526,6 @@ const MenuManagementScreen = ({ activeTab = "menu", onTabPress }) => {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Test Button */}
-          <TouchableOpacity
-            style={{
-              position: "absolute",
-              top: 100,
-              right: 20,
-              backgroundColor: "red",
-              padding: 10,
-              borderRadius: 5,
-              zIndex: 1000,
-            }}
-            onPress={() => {
-              console.log("🧪 Test button pressed!");
-              setShowAddCategoryModal(true);
-            }}
-          >
-            <Text style={{ color: "white", fontWeight: "bold" }}>
-              TEST MODAL
-            </Text>
-          </TouchableOpacity>
 
           <FlatList
             style={styles.content}
@@ -1541,8 +1522,9 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
-    backgroundColor: "#FF6B35",
+    paddingTop: 10,
+    // backgroundColor: "#FF6B35",
+    backgroundColor: "#651FFF",
   },
   headerTitle: {
     fontSize: 24,
@@ -1552,6 +1534,7 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 12,
   },
   headerButton: {

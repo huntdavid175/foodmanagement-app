@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { View, ScrollView, Text, FlatList, StyleSheet } from "react-native";
 
+import BottomTabBar, {
+  BOTTOM_TAB_BAR_HEIGHT,
+} from "../components/BottomTabBar";
 import NavigationBar from "../components/NavigationBar";
 import KPICards from "../components/KPICards";
 import OrderCard from "../components/OrderCard";
@@ -59,9 +62,20 @@ const DashboardScreen = ({ activeTab = "dashboard", onTabPress }) => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.background,
+        },
+      ]}
+    >
+      {/* <BottomTabBar activeTab={activeTab} onTabPress={onTabPress} /> */}
       <NavigationBar activeTab={activeTab} onTabPress={onTabPress} />
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: BOTTOM_TAB_BAR_HEIGHT + 24 }}
+      >
         <KPICards analytics={analytics} />
 
         {/* Order Management Section */}
@@ -107,6 +121,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    // paddingBottom handled via contentContainerStyle
   },
   orderSection: {
     margin: 20,

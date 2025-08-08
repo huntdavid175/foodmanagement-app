@@ -19,6 +19,9 @@ import {
   getOrderAnalytics,
 } from "../services/firebaseService";
 import NavigationBar from "../components/NavigationBar";
+import BottomTabBar, {
+  BOTTOM_TAB_BAR_HEIGHT,
+} from "../components/BottomTabBar";
 import OrderDetailModal from "../components/OrderDetailModal";
 import { useTheme } from "../utils/theme";
 import {
@@ -381,10 +384,22 @@ const KitchenScreen = ({ activeTab = "kitchen", onTabPress }) => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.background,
+        },
+      ]}
+    >
       <NavigationBar activeTab={activeTab} onTabPress={onTabPress} />
+      {/* <BottomTabBar activeTab={activeTab} onTabPress={onTabPress} /> */}
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: BOTTOM_TAB_BAR_HEIGHT + 24 }}
+      >
         {/* KPI Cards */}
         <View style={styles.kpiContainer}>
           <KPICard

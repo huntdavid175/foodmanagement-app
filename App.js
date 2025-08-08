@@ -8,6 +8,9 @@ import MenuManagementScreen from "./src/screens/MenuManagementScreen";
 import AddMealScreen from "./src/screens/AddMealScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import { ThemeProvider } from "./src/utils/theme";
+import BottomTabBar, {
+  BOTTOM_TAB_BAR_HEIGHT,
+} from "./src/components/BottomTabBar";
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState("dashboard");
@@ -102,7 +105,11 @@ export default function App() {
   return (
     <ThemeProvider>
       <StatusBar style="light" backgroundColor="#FF6B35" />
-      {renderScreen()}
+      <View style={{ flex: 1 }}>
+        {/* <View style={{ flex: 1, paddingBottom: BOTTOM_TAB_BAR_HEIGHT }}> */}
+        {renderScreen()}
+        {/* <BottomTabBar activeTab={activeScreen} onTabPress={handleTabPress} /> */}
+      </View>
     </ThemeProvider>
   );
 }

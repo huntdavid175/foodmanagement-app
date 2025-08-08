@@ -10,6 +10,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import BottomTabBar, {
+  BOTTOM_TAB_BAR_HEIGHT,
+} from "../components/BottomTabBar";
 import NavigationBar from "../components/NavigationBar";
 import OrderCard from "../components/OrderCard";
 import OrderDetailModal from "../components/OrderDetailModal";
@@ -195,8 +198,17 @@ const OrdersScreen = ({ activeTab = "orders", onTabPress }) => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.background,
+          // paddingBottom: BOTTOM_TAB_BAR_HEIGHT,
+        },
+      ]}
+    >
       <NavigationBar activeTab={activeTab} onTabPress={onTabPress} />
+      {/* <BottomTabBar activeTab={activeTab} onTabPress={onTabPress} /> */}
 
       <FlatList
         style={styles.content}
@@ -206,7 +218,10 @@ const OrdersScreen = ({ activeTab = "orders", onTabPress }) => {
         showsVerticalScrollIndicator={false}
         onEndReached={loadMoreOrders}
         onEndReachedThreshold={0.5}
-        contentContainerStyle={styles.ordersList}
+        contentContainerStyle={[
+          styles.ordersList,
+          { paddingBottom: BOTTOM_TAB_BAR_HEIGHT + 24 },
+        ]}
         ListHeaderComponent={
           <>
             {/* Analytics Section */}
